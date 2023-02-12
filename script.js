@@ -3,7 +3,6 @@ function setup() {
   const allEpisodes = getAllEpisodes();
   makePageForEpisodes(allEpisodes);
 }
-
 /**
      * combine season number and episode number into an episode code
      * Each part should be zero-padded to two digits.
@@ -22,10 +21,15 @@ function  makeSeasonAndEpisode(episode){
   return `S${paddedSeason}E${paddedEpisode}`;
 };
 
-
 function makePageForEpisodes(episodeList) {
   const rootElem = document.getElementById("root");
-  rootElem.textContent = `Got ${episodeList.length} episode(s)`;
+ // rootElem.textContent = `Got ${episodeList.length} episode(s)`;
+  //clear out the rootElement's HTML before we add the new stuff
+  rootElem.innerHTML = "";
+  const countParagraph = document.createElement("p");
+  countParagraph.innerText = `Showing ${episodeList.length} episode(s)`
+  rootElem.appendChild(countParagraph);
+
   episodeList.forEach(episode => {
     //add the season and episode and name
     // i: create episode name
@@ -43,6 +47,7 @@ function makePageForEpisodes(episodeList) {
 
     //v: create the episode's summary text, add the summary paragraph nb 
     // the episode.summary is actually HTML
+    
     // const summaryParagraph = document.createElement("p");
     // summaryParagraph.innerHTML = episode.summary; //   or`${episode.summary}`;
     // rootElem.appendChild(summaryParagraph);
@@ -50,5 +55,21 @@ function makePageForEpisodes(episodeList) {
     rootElem.innerHTML +=episode.summary   //alternative option 
   });
 }
+
+//level 200: add a 'live' search input
+const searchInput = document.getElementById("search-input");
+searchInput.addEventListener("input", (event)=>{
+   //console.log(event);
+   const searchString = event.target.value.toLowerCase();
+   const filteredEpisodes = getAllEpisodes().filter((episode)=>{
+     //localeCompare might be neater here, make case-insensitive
+     return(
+        episode.summary.toLowerCase().includes(searchString) ||
+        episode.name.toLowerCase().includes(searchString)
+        );
+   });
+    // console.log(filteredEpisodes);
+    makePageForEpisodes(filteredEpisodes);
+});
 
 window.onload = setup;
