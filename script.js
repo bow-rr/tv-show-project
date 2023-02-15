@@ -1,14 +1,20 @@
+const url = "https://api.tvmaze.com/shows/82/episodes";
+let allEpisodes = [];
 //You can edit ALL of the code here
 function setup() {
-  const allEpisodes = getAllEpisodes();
-  makePageForEpisodes(allEpisodes);
+  fetch(url)
+    .then(res => res.json())
+    .then(data =>{
+      //in here we can do whatever we want with the data
+      allEpisodes = data;
+      makePageForEpisodes(allEpisodes);
+  })
+  .catch((err)=> console.error(err));
 }
 /**
      * combine season number and episode number into an episode code
      * Each part should be zero-padded to two digits.
-       Example: S02E07 would be the code for the 7th episode of the 2nd season. 
-       S2E7 would be incorrect.
-*/
+    */
 function  makeSeasonAndEpisode(episode){
   const {season,number} = episode;    // this is Object destructuring
   //the above is the same as the two lines below
@@ -23,6 +29,9 @@ function  makeSeasonAndEpisode(episode){
 
 function makePageForEpisodes(episodeList) {
   const rootElem = document.getElementById("root");
+ //level 300: episode selector
+  const selectElem = document.getElementById("select-input");
+   
  // rootElem.textContent = `Got ${episodeList.length} episode(s)`;
   //clear out the rootElement's HTML before we add the new stuff
   rootElem.innerHTML = "";
@@ -51,17 +60,23 @@ function makePageForEpisodes(episodeList) {
     // const summaryParagraph = document.createElement("p");
     // summaryParagraph.innerHTML = episode.summary; //   or`${episode.summary}`;
     // rootElem.appendChild(summaryParagraph);
-
     rootElem.innerHTML +=episode.summary   //alternative option 
+
+   //level 300: also,one more thing, add it to the select element as an option
+   // i: list all episodes in the format: 'S01E01- Winter is coming'
+    const option = document.createElement("option");
+    option.textContent = `${makeSeasonAndEpisode(episode)} - ${episode.name}`;
+    option.value = episode.id;
+    selectElem.appendChild(option);
   });
 }
 
 //level 200: add a 'live' search input
 const searchInput = document.getElementById("search-input");
 searchInput.addEventListener("input", (event)=>{
-   //console.log(event);
+   e.preventDefault();     //if use 'form' in HTML
    const searchString = event.target.value.toLowerCase();
-   const filteredEpisodes = getAllEpisodes().filter((episode)=>{
+   const filteredEpisodes = allEpisodes.filter((episode)=>{
      //localeCompare might be neater here, make case-insensitive
      return(
         episode.summary.toLowerCase().includes(searchString) ||
@@ -71,5 +86,20 @@ searchInput.addEventListener("input", (event)=>{
     // console.log(filteredEpisodes);
     makePageForEpisodes(filteredEpisodes);
 });
+
+//level 300: 
+const selectElem = document.getElementById("select-input");
+selectElem.addEventListener("change", (e) => {
+  //we now have shown that e.target.value === the episode id  that has been clicked on
+  const idSelectedByUser =Number(e.target.value);
+  const selectedEpisode = allEpisodes.find(
+    (ep) =>ep.id === idSelectedByUser 
+  );
+  if(selectedEpisode){
+    makePageForEpisodes([selectedEpisode]);
+  }
+});
+
+
 
 window.onload = setup;
