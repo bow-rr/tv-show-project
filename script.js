@@ -1,105 +1,160 @@
-const url = "https://api.tvmaze.com/shows/82/episodes";
+const url = getUrlFromId(82);
 let allEpisodes = [];
-//You can edit ALL of the code here
-function setup() {
-  fetch(url)
-    .then(res => res.json())
-    .then(data =>{
-      //in here we can do whatever we want with the data
-      allEpisodes = data;
-      makePageForEpisodes(allEpisodes);
-  })
-  .catch((err)=> console.error(err));
-}
-/**
-     * combine season number and episode number into an episode code
-     * Each part should be zero-padded to two digits.
-    */
-function  makeSeasonAndEpisode(episode){
-  const {season,number} = episode;    // this is Object destructuring
-  //the above is the same as the two lines below
-  // const season = episode.season;
-  // const number = episode.number;
-  // using String padStart() method to add 0 in front of season and episode number
-  const paddedSeason = season.toString().padStart(2,'0');
-  const paddedEpisode = number.toString().padStart(2, "0");
+const searchInput = document.getElementById("search-input");
+const selectEpisode = document.getElementById("select-episode");
+const selectShow = document.getElementById("select-show");
 
-  return `S${paddedSeason}E${paddedEpisode}`;
-};
+//You can edit ALL of the code here
+// function setup() {
+//   fetch(url)
+//     .then((res) => res.json())
+//     .then((data) => {
+//       // in here we can do whatever we want with the data
+//       allEpisodes = data;
+//       makePageForEpisodes(allEpisodes);
+//     })
+//     .catch((err) => console.error(err));
+// }
+
+// this is functionally equivalent to the code above, just showing the difference btw
+// writing a function using async/await versus promises chains
+async function setup() {
+  makeShowDropdownItems();
+  try{
+    const res =  await fetch(url);
+    const data = await res.json();
+  
+    allEpisodes = data;
+    makePageForEpisodes(allEpisodes);
+  }catch(err) {
+    console.error(err);
+  }
+}
 
 function makePageForEpisodes(episodeList) {
-  const rootElem = document.getElementById("root");
- //level 300: episode selector
-  const selectElem = document.getElementById("select-input");
-   
- // rootElem.textContent = `Got ${episodeList.length} episode(s)`;
-  //clear out the rootElement's HTML before we add the new stuff
-  rootElem.innerHTML = "";
-  const countParagraph = document.createElement("p");
-  countParagraph.innerText = `Showing ${episodeList.length} episode(s)`
-  rootElem.appendChild(countParagraph);
-
-  episodeList.forEach(episode => {
-    //add the season and episode and name
-    // i: create episode name
-    const paragraph = document.createElement("p");
-    //ii & iii: create season number and episode number
-    // paragraph.textContent = `S${episode.season}E${episode.number}: ${episode.name}`;
-    // rootElem.appendChild(paragraph);
-    paragraph.textContent = `${makeSeasonAndEpisode(episode)}: ${episode.name}`;
-    rootElem.appendChild(paragraph);
-
-    //iv: create the episode's medium-sized image, add the image
-    const image = document.createElement("img");
-    image.src = episode.image.medium;
-    rootElem.appendChild(image);
-
-    //v: create the episode's summary text, add the summary paragraph nb 
-    // the episode.summary is actually HTML
+  const root = document.getElementById("root");
+  
+  clearElement(root);
+  clearElement(selectEpisode);
+  
+  makeEpisodeCount(root, episodeList);
+  
+  episodeList.forEach((episode) => {
+    // add the season and episode and name
+    makeEpisodeTitle(root, episode);
     
-    // const summaryParagraph = document.createElement("p");
-    // summaryParagraph.innerHTML = episode.summary; //   or`${episode.summary}`;
-    // rootElem.appendChild(summaryParagraph);
-    rootElem.innerHTML +=episode.summary   //alternative option 
-
-   //level 300: also,one more thing, add it to the select element as an option
-   // i: list all episodes in the format: 'S01E01- Winter is coming'
-    const option = document.createElement("option");
-    option.textContent = `${makeSeasonAndEpisode(episode)} - ${episode.name}`;
-    option.value = episode.id;
-    selectElem.appendChild(option);
+    // add the image
+    makeEpisodeImage(root,episode);
+    
+    // add the summary paragraph nb the episode.summary is actually HTML
+    makeEpisodeSummary(root,episode)
+    
+    // also, one more thing, add it to the select element as an option
+    makeEpisodeDropdownItem(selectEpisode,episode)
   });
 }
 
-//level 200: add a 'live' search input
-const searchInput = document.getElementById("search-input");
-searchInput.addEventListener("input", (event)=>{
-   e.preventDefault();     //if use 'form' in HTML
-   const searchString = event.target.value.toLowerCase();
-   const filteredEpisodes = allEpisodes.filter((episode)=>{
-     //localeCompare might be neater here, make case-insensitive
-     return(
-        episode.summary.toLowerCase().includes(searchString) ||
-        episode.name.toLowerCase().includes(searchString)
-        );
-   });
-    // console.log(filteredEpisodes);
-    makePageForEpisodes(filteredEpisodes);
+/**
+ * EVENT LISTENERS
+ */
+searchInput.addEventListener("input", (e) => {
+  const searchString = e.target.value.toLowerCase();
+  const filteredEpisodes = allEpisodes.filter((episode) => {
+    // localeCompare might be neater here
+    return (
+      episode.summary.toLowerCase().includes(searchString) ||
+      episode.name.toLowerCase().includes(searchString)
+    );
+  });
+  makePageForEpisodes(filteredEpisodes);
 });
 
-//level 300: 
-const selectElem = document.getElementById("select-input");
-selectElem.addEventListener("change", (e) => {
-  //we now have shown that e.target.value === the episode id  that has been clicked on
-  const idSelectedByUser =Number(e.target.value);
-  const selectedEpisode = allEpisodes.find(
-    (ep) =>ep.id === idSelectedByUser 
-  );
-  if(selectedEpisode){
+
+selectEpisode.addEventListener("change", (e) => {
+  // we now have shown that e.target.value === the episode id that has been clicked on
+  const idSelectedByUser = Number(e.target.value);
+  const selectedEpisode = allEpisodes.find((ep) => ep.id === idSelectedByUser);
+  if (selectedEpisode) {
     makePageForEpisodes([selectedEpisode]);
   }
 });
 
-
+selectShow.addEventListener("change",async(e) =>{
+  const showIdSelectedByUser = Number(e.target.value);
+  const nextFetchUrl = getUrlFromId(showIdSelectedByUser);
+    try{
+    const res =  await fetch(nextFetchUrl);
+    const data = await res.json();
+  
+    allEpisodes = data;
+    makePageForEpisodes(allEpisodes);
+  }catch(err) {
+    console.error(err);
+  }
+  // <<< TODO
+  // refactor the repeated code in the fetch request above
+  // make sure the list is sorted alphabetically
+  // also we have a bug when the page loads, always shows Got!
+  // put all the helpers into another file and load it in the HTML;
+  searchInput.value ="";
+});
 
 window.onload = setup;
+
+/**
+ * HELPER FUNCTIONS
+ */
+function clearElement(el){
+  el.innerHTML ="";
+}
+
+function makeEpisodeCount(el,list){
+  const countParagraph = document.createElement("p");
+  countParagraph.innerText = `Showing ${list.length} episodes`;
+  el.appendChild(countParagraph);
+}
+
+function makeEpisodeTitle(el,episode){
+  const paragraph = document.createElement("p");
+  paragraph.textContent = `${makeSeasonAndEpisode(episode)}: ${episode.name}`;
+  el.appendChild(paragraph);
+}
+
+function makeEpisodeImage(el,episode){
+  const image = document.createElement("img");
+  image.src = episode.image.medium;
+  el.appendChild(image);
+}
+
+function makeEpisodeSummary(el,episode){
+  el.innerHTML += episode.summary;
+}
+
+function makeEpisodeDropdownItem(el,episode){
+  const option = document.createElement("option");
+  option.textContent = `${makeSeasonAndEpisode(episode)} - ${episode.name}`;
+  option.value = episode.id;
+  el.appendChild(option);
+}
+
+function makeSeasonAndEpisode(episode) {
+  const { season, number } = episode;
+  const paddedSeason = season.toString().padStart(2, "0");
+  const paddedEpisode = number.toString().padStart(2, "0");
+
+  return `S${paddedSeason}E${paddedEpisode}`;
+}
+
+function makeShowDropdownItems(){
+  const allShows = getAllShows();
+  allShows.forEach(show => {
+    const option = document.createElement("option");
+    option.textContent = show.name;
+    option.value = show.id;
+    selectShow.appendChild(option);
+  })
+}
+
+function getUrlFromId(id){
+  return `https://api.tvmaze.com/shows/${id}/episodes`;
+}
